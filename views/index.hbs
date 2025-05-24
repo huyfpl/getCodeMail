@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lấy mã đăng nhập</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f9fafb;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      max-width: 450px;
+      margin: 40px auto;
+    }
+
+    .card {
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      padding: 24px;
+    }
+
+    .form-select {
+      background-position: right 1rem center;
+      padding-right: 2.5rem;
+    }
+
+    .btn-custom {
+      background-color: rgb(59, 130, 246);
+      color: white;
+      font-weight: 500;
+    }
+
+    .btn-custom:hover {
+      background-color: rgb(37, 99, 235);
+    }
+
+    .error-message {
+      color: red;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    #codeResult {
+      display: none;
+      text-align: center;
+      font-weight: bold;
+      font-size: 18px;
+      color: #0d6efd;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3 class="text-center mb-4 fw-bold">Lấy mã đăng nhập</h3>
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title fw-bold">Thông tin tài khoản</div>
+        <div class="card-subtitle text-muted mb-3">Nhập thông tin để lấy mã đăng nhập</div>
+
+        <form id="loginForm">
+          <div class="mb-3">
+            <label for="service" class="form-label">Chọn dịch vụ</label>
+            <select id="service" class="form-select">
+              <option value="">Mời chọn dịch vụ</option>
+              <option value="netflix">Netflix</option>
+              <option value="chatgpt">ChatGPT</option>
+              <option value="spotify">Spotify</option>
+            </select>
+            <div id="serviceError" class="error-message d-none">Vui lòng chọn dịch vụ.</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="email" class="form-label">Email tài khoản</label>
+            <input type="email" class="form-control" id="email" placeholder="Vui lòng chọn dịch vụ trước">
+            <div id="emailError" class="error-message d-none">Vui lòng nhập email hợp lệ.</div>
+          </div>
+
+          <button type="submit" class="btn btn-custom w-100">Nhận Code</button>
+        </form>
+
+        <!-- Hiển thị mã kết quả -->
+        <div id="codeResult"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    const service = document.getElementById("service");
+    const email = document.getElementById("email");
+    const serviceError = document.getElementById("serviceError");
+    const emailError = document.getElementById("emailError");
+    const codeResult = document.getElementById("codeResult");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      let valid = true;
+
+      // Reset lỗi và kết quả
+      serviceError.classList.add("d-none");
+      emailError.classList.add("d-none");
+      codeResult.style.display = "none";
+      codeResult.textContent = "";
+      codeResult.style.cursor = "default";
+
+      // Validate dịch vụ
+      if (!service.value) {
+        serviceError.classList.remove("d-none");
+        valid = false;
+      }
+
+      // Validate email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email.value || !emailRegex.test(email.value)) {
+        emailError.classList.remove("d-none");
+        valid = false;
+      }
+
+      if (valid) {
+        // Hiển thị đang xử lý
+        codeResult.textContent = "⏳ Đang xử lý...";
+        codeResult.style.display = "block";
+
+        // Gửi yêu cầu tới API
+        fetch('/api/get-code', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email.value,
+            service: service.value
+          }),
+        })
+        .then(response => response.json())
+        .then(data => {
+          // Tạo độ trễ ngẫu nhiên 1-3 giây
+          const delay = Math.floor(Math.random() * 2000) + 1000;
+          setTimeout(() => {
+            if (data.success && data.code) {
+              const serviceName = service.options[service.selectedIndex].text;
+              codeResult.textContent = `Mã code ${serviceName}: ${data.code}`;
+              codeResult.style.cursor = "pointer";
+
+              // Cho phép copy khi click
+              codeResult.onclick = () => {
+                navigator.clipboard.writeText(data.code).then(() => {
+                  codeResult.textContent = `✅ Đã copy mã: ${data.code}`;
+                  setTimeout(() => {
+                    codeResult.textContent = `Mã code ${serviceName}: ${data.code}`;
+                  }, 2000);
+                });
+              };
+            } else {
+              codeResult.textContent = `Không tìm thấy mã xác thực từ dịch vụ ${service.value}`;
+              codeResult.style.cursor = "default";
+            }
+          }, delay);
+        })
+        .catch(error => {
+          console.error('Lỗi:', error);
+          codeResult.textContent = "⚠️ Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.";
+        });
+      }
+    });
+
+    // Thay đổi placeholder email khi chọn dịch vụ
+    service.addEventListener("change", () => {
+      email.placeholder = service.value ? "Nhập email tài khoản..." : "Vui lòng chọn dịch vụ trước";
+    });
+  </script>
+  <script>
+  // ===== 1. Chặn các phím tắt mở DevTools =====
+  document.addEventListener('keydown', function (e) {
+    if (
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key)) ||
+      (e.ctrlKey && e.key === 'U')
+    ) {
+      e.preventDefault();
+    }
+  });
+
+  // ===== 2. Chặn chuột phải =====
+  document.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+  });
+
+  // ===== 3. Tắt hoàn toàn console =====
+  (function () {
+    const emptyFn = () => {};
+    console.log = emptyFn;
+    console.warn = emptyFn;
+    console.error = emptyFn;
+    console.info = emptyFn;
+    console.debug = emptyFn;
+    Object.freeze(console);
+  })();
+
+  // ===== 4. Phát hiện DevTools qua kích thước cửa sổ =====
+  (function detectDevToolsResize() {
+    let threshold = 160;
+    setInterval(() => {
+      if (
+        window.outerWidth - window.innerWidth > threshold ||
+        window.outerHeight - window.innerHeight > threshold
+      ) {
+        document.body.innerHTML = "<h2 style='text-align:center; margin-top:20%; color:red;'>🚫 Truy cập DevTools bị chặn</h2>";
+      }
+    }, 1000);
+  })();
+
+  // ===== 5. Kỹ thuật phát hiện debugger (ẩn dụ) =====
+  (function detectDebuggerLoop() {
+    const devtoolsDetector = () => {
+      let start = performance.now();
+      debugger; // Nếu bật DevTools, sẽ bị chặn ở đây
+      let end = performance.now();
+      if (end - start > 100) {
+        document.body.innerHTML = "<h2 style='text-align:center; margin-top:20%; color:red;'>🛑 DevTools bị phát hiện!</h2>";
+      }
+    };
+
+    setInterval(devtoolsDetector, 1500);
+  })();
+</script>
+
+
+
+</body>
+</html>
