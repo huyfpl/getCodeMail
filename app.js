@@ -6,7 +6,7 @@ const emailRoutes = require('./routes/email');
 
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 
 // View engine setup
 app.engine('hbs', engine({ extname: 'hbs', defaultLayout: false }));
@@ -27,6 +27,6 @@ app.get('/', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT,'0.0.0.0', () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });

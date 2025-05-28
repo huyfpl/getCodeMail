@@ -62,35 +62,36 @@ const emailController = {
       });
     }
 
-    // Chuẩn hóa: bỏ ký tự đặc biệt và chuyển về thường
     const normalize = (text) => text?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
     const target = normalize(service);
 
-    // Tìm email hợp lệ nhất (theo thời gian) và liên quan đến service
-    const sortedEmails = result.data.sort((a, b) => {
-      return new Date(b.created_at) - new Date(a.created_at);
-    });
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+    // Sắp xếp và lọc các email trong vòng 5 phút gần nhất
+    const recentEmails = result.data
+      .filter(mail => new Date(mail.created_at) >= fiveMinutesAgo)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     let code = null;
 
-    for (const mail of sortedEmails) {
+    for (const mail of recentEmails) {
       const subjectNorm = normalize(mail.subject);
       const fromNorm = normalize(mail.from);
 
-      // Chỉ tiếp tục nếu subject hoặc from chứa tên service
       const isRelated =
         subjectNorm.includes(target) ||
         fromNorm.includes(target);
 
       if (!isRelated) continue;
 
-      // Ưu tiên tìm mã trong subject
       const subjectMatch = mail.subject.match(/\b\d{6,8}\b/);
       if (subjectMatch) {
         code = subjectMatch[0];
         break;
       }
     }
+
     if (code) {
       console.log('Mã tìm thấy:', code);
       return res.status(200).json({
@@ -100,17 +101,19 @@ const emailController = {
     } else {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy mã phù hợp từ email liên quan đến dịch vụ yêu cầu'
+        message: 'Không tìm thấy mã hợp lệ trong vòng 5 phút qua'
       });
     }
   } catch (error) {
-    console.error('Lỗi khi lấy mã:', error.message);    return res.status(500).json({
+    console.error('Lỗi khi lấy mã:', error.message);
+    return res.status(500).json({
       success: false,
       message: 'Lỗi nội bộ khi xử lý mã',
       error: error.message
     });
   }
-  },
+},
+
 
   showGetCodeForm: async (req, res) => {
     // Render the index.hbs view for the code retrieval form
