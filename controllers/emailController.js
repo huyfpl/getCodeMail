@@ -91,7 +91,7 @@ const emailController = {
           if (!item.created_at) return false;
           const createdAt = new Date(item.created_at);
           const diffMs = now - createdAt;
-          return diffMs >= 0 && diffMs <= 51 * 60 * 1000;
+          return diffMs >= 0 && diffMs <= 5 * 60 * 1000;
         })
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
 
