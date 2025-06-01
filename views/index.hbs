@@ -42,9 +42,7 @@
       color: red;
       font-size: 14px;
       margin-top: 4px;
-    }
-
-    #codeResult {
+    }    #codeResult {
       display: none;
       text-align: center;
       font-weight: bold;
@@ -52,6 +50,50 @@
       color: #0d6efd;
       margin-top: 20px;
       cursor: pointer;
+    }
+    
+    @keyframes rotating {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+      .rotating-emoji {
+      display: inline-block;
+      animation: rotating 1.5s linear infinite;
+    }
+    
+    /* Hiệu ứng trượt cho dropdown */
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    #service {
+      transition: all 0.3s ease;
+    }
+    
+    #service.animate {
+      animation: slideIn 0.5s ease forwards;
+    }
+    
+    /* Styling cho option được chọn */
+    #service option:checked {
+      font-weight: bold;
+      background-color: #e6f0ff;
+    }
+    
+    /* Hiệu ứng khi hover qua các option */
+    select option:hover {
+      background-color: #f0f7ff;
     }
   </style>
 </head>
@@ -64,13 +106,12 @@
         <div class="card-title fw-bold">Thông tin tài khoản</div>
         <div class="card-subtitle text-muted mb-3">Nhập thông tin để lấy mã đăng nhập</div>
 
-        <form id="loginForm">
-          <div class="mb-3">
+        <form id="loginForm">          <div class="mb-3">
             <label for="service" class="form-label">Chọn dịch vụ</label>
             <select id="service" class="form-select">
               <option value="">Mời chọn dịch vụ</option>
-              <option value="chatgpt" class="fw-bold">ChatGPT</option>
-              <option value="grok" class="fw-bold">Grok</option>
+              <option value="chatgpt">ChatGPT</option>
+              <option value="grok">Grok</option>
             </select>
             <div id="serviceError" class="error-message d-none">Vui lòng chọn dịch vụ.</div>
           </div>
@@ -95,19 +136,21 @@
     const form = document.getElementById("loginForm");
     const service = document.getElementById("service");
     const email = document.getElementById("email");
-    const serviceError = document.getElementById("serviceError");
-    const emailError = document.getElementById("emailError");
+    const serviceError = document.getElementById("serviceError");    const emailError = document.getElementById("emailError");
     const codeResult = document.getElementById("codeResult");
+    
+    // Khởi tạo styling ban đầu nếu đã có dịch vụ được chọn
+    if (service.value) {
+      highlightSelectedOption();
+    }
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      let valid = true;
-
-      // Reset lỗi và kết quả
+      let valid = true;      // Reset lỗi và kết quả
       serviceError.classList.add("d-none");
       emailError.classList.add("d-none");
       codeResult.style.display = "none";
-      codeResult.textContent = "";
+      codeResult.innerHTML = "";
       codeResult.style.cursor = "default";
 
       // Validate dịch vụ
@@ -121,11 +164,15 @@
       if (!email.value || !emailRegex.test(email.value)) {
         emailError.classList.remove("d-none");
         valid = false;
-      }
-
-      if (valid) {
-        // Hiển thị đang xử lý
-        codeResult.textContent = "⏳ Đang xử lý...";
+      }      if (valid) {
+        // Hiển thị đang xử lý với hiệu ứng xoay
+        const hourglassEmoji = document.createElement('span');
+        hourglassEmoji.textContent = '⏳';
+        hourglassEmoji.className = 'rotating-emoji';
+        
+        codeResult.textContent = '';
+        codeResult.appendChild(hourglassEmoji);
+        codeResult.appendChild(document.createTextNode(' Đang xử lý...'));
         codeResult.style.display = "block";
 
         // Gửi yêu cầu tới API
@@ -140,12 +187,12 @@
           }),
         })
           .then(response => response.json())
-          .then(data => {
-            // Tạo độ trễ ngẫu nhiên 1-3 giây
+          .then(data => {            // Tạo độ trễ ngẫu nhiên 1-3 giây
             const delay = Math.floor(Math.random() * 2000) + 1000;
             setTimeout(() => {
               if (data.success && data.code) {
-                const serviceName = service.options[service.selectedIndex].text; codeResult.textContent = `Mã code ${serviceName}: ${data.code}`;
+                const serviceName = service.options[service.selectedIndex].text; 
+                codeResult.textContent = `Mã code ${serviceName}: ${data.code}`;
                 codeResult.style.cursor = "pointer";
 
                 // Hiệu ứng khi người dùng di chuột qua mã
@@ -167,24 +214,60 @@
                       codeResult.textContent = originalText;
                     }, 2000);
                   });
-                };
-              } else {
+                };              } else {
                 codeResult.textContent = `Không tìm thấy mã xác thực từ dịch vụ ${service.value}`;
                 codeResult.style.cursor = "default";
               }
             }, delay);
-          })
-          .catch(error => {
+          })          .catch(error => {
             console.error('Lỗi:', error);
             codeResult.textContent = "⚠️ Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.";
           });
       }
-    });
-
-    // Thay đổi placeholder email khi chọn dịch vụ
+    });    // Thay đổi placeholder email khi chọn dịch vụ
     service.addEventListener("change", () => {
       email.placeholder = service.value ? "Nhập email tài khoản..." : "Vui lòng chọn dịch vụ trước";
+      
+      // Thêm hiệu ứng khi chọn dịch vụ
+      highlightSelectedOption();
     });
+    
+    // Thêm hiệu ứng trượt khi focus vào dropdown
+    service.addEventListener("focus", () => {
+      service.classList.add("animate");
+    });
+    
+    service.addEventListener("blur", () => {
+      service.classList.remove("animate");
+    });
+    
+    // Hàm highlight option được chọn
+    function highlightSelectedOption() {
+      if (service.value) {
+        // Đảm bảo option được chọn có style đậm
+        const selectedOption = service.options[service.selectedIndex];
+        
+        // Reset tất cả options về style mặc định
+        for (let i = 0; i < service.options.length; i++) {
+          service.options[i].style.fontWeight = "normal";
+          service.options[i].style.color = "";
+        }
+        
+        // Highlight option được chọn
+        selectedOption.style.fontWeight = "bold";
+        selectedOption.style.color = "#0d6efd";
+        
+        // Thêm hiệu ứng cho service dropdown
+        service.style.borderColor = "#0d6efd";
+        service.style.boxShadow = "0 0 0 0.2rem rgba(13, 110, 253, 0.25)";
+        
+        // Reset style sau 1 giây
+        setTimeout(() => {
+          service.style.borderColor = "";
+          service.style.boxShadow = "";
+        }, 1000);
+      }
+    }
   </script>
   <script>
     // ===== 1. Chặn các phím tắt mở DevTools =====
