@@ -48,48 +48,7 @@ const emailService = {
             console.error(`Error fetching message content for ID ${messageId}:`, error.message);
             throw error;
         }
-    }, 
-    getCode: async (userEmail, service) => {
-        try {
-            // Get all emails
-            const response = await emailService.getEmails();
-
-            // Kiểm tra định dạng phản hồi hợp lệ
-            if (!response || !response.success || !response.data || !Array.isArray(response.data)) {
-                throw new Error('Invalid response format from getEmails');
-            }
-
-            // Tìm email khớp
-            const matchingEmail = response.data.find(item =>
-                item.email && item.email.toLowerCase() === userEmail.toLowerCase()
-            );
-
-            if (!matchingEmail) {
-                throw new Error(`No matching email found for ${userEmail}`);
-            }
-
-            const mailId = matchingEmail.id;
-            const mailDetailsResponse = await emailService.getMailDetails(mailId);
-            const items = mailDetailsResponse?.data?.items || [];
-
-            // Filter by service if provided
-            const filteredItems = service
-                ? items.filter(item => item.subject && item.subject.toLowerCase().includes(service.toLowerCase()))
-                : items;
-
-            return {
-                success: true,
-                data: filteredItems
-            };
-        } catch (error) {
-            console.error(`Error getting code for email ${userEmail}:`, error.message);
-            return {
-                success: false,
-                message: error.message
-            };
-        }
     }
-
 
 };
 
